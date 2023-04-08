@@ -3,9 +3,16 @@ package main;
 import inputs.KeyboardInputs;
 import inputs.MouseInputs;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
-import java.util.Random;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.InputStream;
+
+import static utils.Constants.Directions.*;
+import static utils.Constants.PlayerConstants.*;
+
 
 public class GamePanel extends JPanel {
 
@@ -14,64 +21,112 @@ public class GamePanel extends JPanel {
 
     private float xDelta = 0;
     private float yDelta = 0;
-    private float xDir = 1f;
-    private float yDir = 1f;
 
-    private Color color;
-    private Random random;
+    private final int artWidth = 64;
+    private final int artHeight = 40;
+
+    private BufferedImage bufferedImage;
+    private BufferedImage[][] animations;
+
+    private int animationTick;
+    private int animationIndex;
+    private int animationSpeed = 15;
+
+    private int playerAction = RUNNING;
+    private int playerDirection = 1;
+    private boolean playerIsMoving = false;
 
     public GamePanel() {
 
         keyboardInputs = new KeyboardInputs(this);
         mouseInputs = new MouseInputs(this);
-        random = new Random();
+
+        importImage();
+        loadAnimations();
+
+        setPanelSize();
 
         addKeyListener(keyboardInputs);
         addMouseListener(mouseInputs);
         addMouseMotionListener(mouseInputs);
     }
 
+    private void importImage() {
+
+        try (InputStream is = getClass().getResourceAsStream("/player_sprites.png")) {
+            bufferedImage = ImageIO.read(is);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadAnimations() {
+        animations = new BufferedImage[9][6];
+
+        for (int j = 0; j < animations.length; j++) {
+            for (int i = 0; i < animations[j].length; i++) {
+                animations[j][i] = bufferedImage.getSubimage(i*artWidth,j*artHeight,artWidth,artHeight);
+            }
+        }
+    }
+
+    private void setPanelSize() {
+        Dimension size = new Dimension(1280,720);
+        setPreferredSize(size);
+        setMaximumSize(size);
+    }
+
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        setReactPos();
-        g.setColor(color);
-        g.fillRect((int) xDelta, (int) yDelta,200,50 );
+        updateAnimationTick();
+        setAnimation();
+        updatePosition();
+
+        g.drawImage(animations[playerAction][animationIndex],(int) xDelta,(int) yDelta,artWidth*2,artHeight*2,null);
+
         Toolkit.getDefaultToolkit().sync();
 
     }
 
-    public void setReactPos() {
-        setxDelta(xDelta += xDir);
-        if (xDelta > 400 || xDelta < 0) {
-            xDir *= -1;
-            color = getRandomColor();
-        }
+    private void updatePosition() {
 
-        setyDelta(yDelta += yDir);
-        if (yDelta > 400 || yDelta < 0) {
-            yDir *= -1;
-            color = getRandomColor();
+        if (playerIsMoving) {
+            switch (playerDirection) {
+                case LEFT -> xDelta -= 5;
+                case UP -> yDelta -= 5;
+                case RIGHT -> xDelta += 5;
+                case DOWN -> yDelta += 5;
+            }
         }
     }
 
-    private Color getRandomColor() {
-        int r = random.nextInt(256);
-        int g = random.nextInt(256);
-        int b = random.nextInt(256);
-        return new Color(r,g,b);
+    private void updateAnimationTick() {
+
+        animationTick++;
+        if (animationTick >= animationSpeed) {
+            animationTick = 0;
+            animationIndex++;
+            if (animationIndex > getSpriteAmount(playerAction) ) {
+                animationIndex = 0;
+            }
+        }
     }
 
-    public void setReactPos(int xDelta, int yDelta) {
-        setxDelta(xDelta);
-        setyDelta(yDelta);
+    public void setAnimation() {
+        if (playerIsMoving) {
+            playerAction = RUNNING;
+        } else {
+            playerAction =IDLE;
+        }
     }
 
-    public void setxDelta(float xDelta) {
-        this.xDelta = xDelta;
+    public void setPlayerDirection(int playerDirection) {
+        this.playerDirection = playerDirection;
+        setPlayerIsMoving(true);
     }
 
-    public void setyDelta(float yDelta) {
-        this.yDelta = yDelta;
+    public void setPlayerIsMoving(boolean playerIsMoving) {
+        this.playerIsMoving = playerIsMoving;
     }
 }
