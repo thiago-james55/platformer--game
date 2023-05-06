@@ -1,7 +1,8 @@
 package main;
 
-import entities.Player;
-import levels.LevelManager;
+import gamestates.GameState;
+import gamestates.Menu;
+import gamestates.Playing;
 
 import java.awt.*;
 
@@ -12,8 +13,9 @@ public class Game implements Runnable {
     private final int FPS_SET = 120;
     private final int UPS_SET = 200;
 
-    private Player player;
-    private LevelManager levelManager;
+    private Playing playing;
+    private Menu menu;
+
 
     public final static int TILES_DEFAULT_SIZE = 32;
     public final static float SCALE = 2f;
@@ -25,18 +27,15 @@ public class Game implements Runnable {
 
     public Game() {
         initializeClasses();
-
         gamePanel = new GamePanel(this);
         gameWindow = new GameWindow(gamePanel);
         gamePanel.requestFocus();
-
         startGameLoop();
     }
 
     private void initializeClasses() {
-        levelManager = new LevelManager(this);
-        player = new Player(200, 200, (int) (64 * SCALE), (int) (40 * SCALE));
-        player.loadLevelData(levelManager.getCurrentLevel().getLevelData());
+        menu = new Menu(this);
+        playing = new Playing(this);
     }
 
     private void startGameLoop() {
@@ -45,13 +44,22 @@ public class Game implements Runnable {
     }
 
     public void update() {
-        player.update();
-        levelManager.update();
+        switch (GameState.state) {
+
+            case PLAYING -> playing.update();
+            case MENU -> menu.update();
+        }
     }
 
     public void render (Graphics g) {
-        levelManager.draw(g);
-        player.render(g);
+
+        switch (GameState.state) {
+
+            case PLAYING -> playing.draw(g);
+            case MENU -> menu.draw(g);
+
+        }
+
     }
 
     @Override
@@ -101,11 +109,15 @@ public class Game implements Runnable {
 
     }
 
-    public Player getPlayer() {
-        return player;
+    public void windowFocusLost() {
+        if (GameState.state == GameState.PLAYING) { getPlaying().windowFocusLost(); }
     }
 
-    public void windowFocusLost() {
-        player.resetDirectionBooleans();
+    public Menu getMenu() {
+        return menu;
+    }
+
+    public Playing getPlaying() {
+        return playing;
     }
 }
